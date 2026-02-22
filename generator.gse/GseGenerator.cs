@@ -603,7 +603,6 @@ public class GseGenerator : IGenerator
     var supportedCons = appInfoModel.ControllerInfo
       .Where(con =>
         supported_controllers_types.Contains(con.ControllerType.ToLowerInvariant())
-        && con.EnabledBranches.Any(br => br.Equals("default", StringComparison.OrdinalIgnoreCase))
       );
     if (!supportedCons.Any())
     {
