@@ -383,6 +383,10 @@ public class AppStats
         {
           stat.Id = idKey;
         }
+        else
+        {
+          Log.Instance.Write(Log.Kind.Error, $"Stat '{name}' is missing an ID!");
+        }
       }
 
       {
@@ -535,6 +539,10 @@ public class AppStats
         else if (int.TryParse(kv.Key, CultureInfo.InvariantCulture, out var idKey))
         {
           ach.Id = idKey;
+        }
+        else
+        {
+          Log.Instance.Write(Log.Kind.Error, $"Achievement '{name}' is missing an ID!");
         }
       }
 
