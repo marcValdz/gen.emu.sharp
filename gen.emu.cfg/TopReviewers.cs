@@ -51,8 +51,9 @@ public static class TopReviewers
       bool isOk = jobj.GetKeyIgnoreCase("success").ToBoolSafe();
       if (!isOk)
       {
-        lastErr = new InvalidDataException($"'success' property is false");
-        throw lastErr;
+        var err = new InvalidDataException($"'success' property is false");
+        lastErr = err;
+        throw err;
       }
       var reviewsArray = jobj.GetKeyIgnoreCase("reviews").ToArraySafe();
       return reviewsArray
