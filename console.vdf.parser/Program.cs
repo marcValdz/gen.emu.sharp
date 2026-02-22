@@ -67,7 +67,7 @@ foreach (var item in filepaths)
   Log.Instance.EndSteps(lglvfile);
 }
 
-JsonObject GetVdfFileData(string filepath)
+static JsonObject GetVdfFileData(string filepath)
 {
   using var vdfStream = new FileStream(filepath, new FileStreamOptions
   {

@@ -359,7 +359,7 @@ public class GseGenerator : IGenerator
     // remove leading "/." (pointing at current dir)
     // remove any "/." in between
     // and other path sanitization operations
-    string SanitizePath(string path)
+    static string SanitizePath(string path)
     {
       // appid 292930 sets "path=/"
       path = path
@@ -394,7 +394,7 @@ public class GseGenerator : IGenerator
       return path;
     }
 
-    string FixupVars(string path)
+    static string FixupVars(string path)
     {
       return path
         .Replace("{64BitSteamID}", "{::64BitSteamID::}", StringComparison.OrdinalIgnoreCase)
