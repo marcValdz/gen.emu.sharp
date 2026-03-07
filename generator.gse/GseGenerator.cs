@@ -1,4 +1,4 @@
-using CommandLine;
+﻿using CommandLine;
 using common.utils;
 using common.utils.Logging;
 using gen.emu.shared;
@@ -1143,26 +1143,47 @@ public class GseGenerator : IGenerator
     Utils.WriteJson(defaultInvItems, Path.Combine(settingsFolder, "default_items.json"));
   }
 
-  private static JsonNode EnsureStringsNode(JsonNode node)
-  {
-      if (node is JsonObject jsonObject)
-      {
-          var result = new JsonObject();
-          foreach (var (key, value) in jsonObject)
-          {
-              result[key] = value?.ToString();
-          }
-          return result;
-      }
-
-      return JsonValue.Create(node.ToString())!;
-  }
-
   public Task SaveAchievements(IReadOnlyList<AchievementModel> achsModels)
   {
     if (achsModels.Count == 0)
     {
       return Task.CompletedTask;
+    }
+
+    /*
+      appid 218620 has achievements with numeric values:
+      {
+        "name": "green_3",
+        "hidden": 0,
+        "displayName": {
+          "english": 1337,
+          "german": 1337,
+          ....
+    */
+    static JsonNode EnsureStringsNode(JsonNode node, string name)
+    {
+      switch (node.GetValueKind())
+      {
+        case JsonValueKind.Object:
+        {
+          var result = new JsonObject();
+          foreach (var (key, value) in node.AsObject())
+          {
+            result[key] = value?.ToString() ?? "";
+          }
+          return result;   
+        }
+
+        case JsonValueKind.String:
+          // nothing
+          break;
+
+        default:
+          Log.Instance.Write(Log.Kind.Warning, $"achievement '{name}' has unexpected prop type '{node.GetValueKind()}' (expected string)");
+          break;
+      }
+
+      return JsonValue.Create(node.ToString())!;
     }
 
     bool needDefaultIconUnlocked = false;
@@ -1203,8 +1224,8 @@ public class GseGenerator : IGenerator
         ["icon_gray"] =
           Path.Combine(ACHIEVEMENT_IMAGE_FOLDER_NAME, ACHIEVEMENT_IMAGE_LOCKED_FOLDER_NAME, iconLockedName).Replace('\\', '/'),
 
-        ["displayName"] = EnsureStringsNode(ach.FriendlyNameTranslations),
-        ["description"] = EnsureStringsNode(ach.DescriptionTranslations),
+        ["displayName"] = EnsureStringsNode(ach.FriendlyNameTranslations, ach.InternalName),
+        ["description"] = EnsureStringsNode(ach.DescriptionTranslations, ach.InternalName),
 
       };
       if (ach.ProgressDetails is not null)
