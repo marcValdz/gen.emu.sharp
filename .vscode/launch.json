@@ -15,6 +15,7 @@
                 "-v",
                 "--icons", "--imgs", "--scrn", "--thumbs", "--vid", "--invicons", "--inviconslarge",
                 "--nonet",
+                "2406770", // inventory item ("itemdefid": "273") with duplicate key ("meshcolor")
                 // --- multiple ufs paths overrides
                 "1094680",
                 "312520",

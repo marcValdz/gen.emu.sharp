@@ -60,7 +60,26 @@ class InventoryCustomHandler
     }
 
     var resultStr = Encoding.UTF8.GetString(webRes.Reverse().SkipWhile(b => b == 0).Reverse().ToArray());
-    return JsonArray.Parse(resultStr).ToArraySafe();
+
+    /*
+      appid 2406770 has an inventory item "273" with duplicate key "meshcolor":
+
+      {
+        "appid": "2406770",
+        "itemdefid": "273",
+        ...
+        "displayname": "",
+        "displaycolor": "Navy",
+        "itemclasssup": "Gear",
+        "itemclass": "Pants",
+        "meshname": "/Script/Engine.SkeletalMesh\u0027/Game/AAAModularSoldierVol_2/Modules/ModularSoldierVol_2/LowBodyPart/Pants/SK_Pants_C.SK_Pants_C\u0027",
+        ...
+        "meshcolor": "/Script/Engine.MaterialInstanceConstant\u0027/Game/AAAModularSoldierVol_2/Modules/ModularSoldierVol_2/_Materials/MI_Pants_02_Navy.MI_Pants_02_Navy\u0027",
+        "meshcolor": "/Script/Engine.MaterialInstanceConstant\u0027/Game/AAAModularSoldierVol_2/Modules/ModularSoldierVol_2/_Materials/MI_Pants_02_Navy.MI_Pants_02_Navy\u0027",
+        ...
+      }
+    */
+    return Utils.ParseJsonLenient(resultStr).ToArraySafe();
   }
 
 }

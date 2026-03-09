@@ -1118,7 +1118,13 @@ public class GseGenerator : IGenerator
             case JsonValueKind.Null:
               outVal = "null";
               break;
+            case JsonValueKind.String:
+            case JsonValueKind.Number:
+              outVal = val.ToString();
+              break;
+
             default:
+              Log.Instance.Write(Log.Kind.Debug, $"inventory item '{itemId}' element '{key}' has unexpected JSON type '{val.GetValueKind()}'");
               outVal = val.ToString();
               break;
           }
