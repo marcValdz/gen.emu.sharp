@@ -88,6 +88,224 @@ public static class Utils
     }
   }
 
+
+  enum JsonContext
+  {
+    DUMMY_START, // for initial start
+    OBJECT, // non-terminal
+    ARRAY, // non-terminal
+  }
+
+  /// <summary>
+  /// Allows duplicate keys
+  /// </summary>
+  public static JsonNode? ParseJsonLenient(string? str)
+  {
+    if (string.IsNullOrWhiteSpace(str))
+    {
+      return null;
+    }
+
+    static JsonNode? ParseJson(ref Utf8JsonReader reader)
+    {
+      // what are we doing currently
+      Stack<JsonContext> contexts = new([JsonContext.DUMMY_START]);
+      // what are still processing
+      Stack<JsonNode?> values = new();
+
+      JsonNode? ReadNextJsonValue(ref Utf8JsonReader reader)
+      {
+        switch (reader.TokenType)
+        {
+          case JsonTokenType.StartObject:
+            {
+              var newObj = new JsonObject();
+              contexts.Push(JsonContext.OBJECT);
+              // upcoming val should be on top, needs further processing
+              values.Push(newObj);
+              return newObj;
+            }
+
+          case JsonTokenType.StartArray:
+            {
+              var newArr = new JsonArray();
+              contexts.Push(JsonContext.ARRAY);
+              // upcoming val should be on top, needs further processing
+              values.Push(newArr);
+              return newArr;
+            }
+
+          case JsonTokenType.String:
+          case JsonTokenType.Number:
+          case JsonTokenType.Null:
+          case JsonTokenType.True:
+          case JsonTokenType.False:
+            // we don't put this value on the stack since we won't process it any further
+            return JsonNode.Parse(ref reader);
+
+          default:
+            throw new JsonException($"Expected JSON value, got '{reader.TokenType}'");
+        }
+      }
+
+      while (true)
+      {
+        if (contexts.Count == 0)
+        {
+          break;
+        }
+
+        switch (contexts.Peek())
+        {
+          case JsonContext.DUMMY_START:
+            contexts.Pop();
+            if (reader.Read())
+            {
+              // for non-terminal nodes (obj, array) this line pushes the value twice
+              // the reader function pushes it for context, and we push it as a final return value
+              // the extra push is later poped by the relevant context handler case
+              // and we end up with 1 value on the stack as expected
+              values.Push(ReadNextJsonValue(ref reader));
+            }
+            else
+            {
+              values.Push(null);
+            }
+            break;
+
+          case JsonContext.OBJECT:
+            if (!reader.Read())
+            {
+              throw new JsonException("Unbalanced object notation");
+            }
+
+            if (reader.TokenType == JsonTokenType.EndObject)
+            {
+              contexts.Pop(); // stop processing json dict
+              values.Pop(); // this json dict is no longer needed
+            }
+            else
+            {
+              if (reader.TokenType != JsonTokenType.PropertyName)
+              {
+                throw new JsonException("Expected a key for JSON object");
+              }
+              // we must grab the active/current object first, because reading next value might push a new value for upcoming context
+              var jnode = values.Peek() ?? throw new JsonException("JSON object is null");
+              var currentObj = jnode.AsObject();
+              var key = reader.GetString() ?? throw new JsonException("Object key is null");
+              if (!reader.Read())
+              {
+                throw new JsonException("Expected a value for JSON object");
+              }
+              var newVal = ReadNextJsonValue(ref reader);
+              // if we have that key already, conver the current dict to array
+              if (
+                currentObj.TryGetPropertyValue(key, out var oldVal)
+                && oldVal?.GetValueKind() != JsonValueKind.Array
+              )
+              {
+                // detach it from parent first otherwise it throws:
+                // "'System.InvalidOperationException' occurred in System.Text.Json.dll 'The node already has a parent.'"
+                currentObj.Remove(key);
+                oldVal = new JsonArray(oldVal);
+                currentObj[key] = oldVal;
+              }
+
+              if (oldVal?.GetValueKind() == JsonValueKind.Array)
+              {
+                oldVal.AsArray().Add(newVal);
+              }
+              else
+              {
+                currentObj[key] = newVal;
+              }
+            }
+            break;
+
+          case JsonContext.ARRAY:
+            if (!reader.Read())
+            {
+              throw new JsonException("Unbalanced array notation");
+            }
+
+            if (reader.TokenType == JsonTokenType.EndArray)
+            {
+              contexts.Pop(); // stop processing json array
+              values.Pop(); // this json array is no longer needed
+            }
+            else
+            {
+              // we must grab the active/current array first, because reading next value might push a new value for upcoming context
+              var jnode = values.Peek() ?? throw new JsonException("JSON array is null");
+              var thisArr = jnode.AsArray();
+              thisArr.Add(ReadNextJsonValue(ref reader));
+            }
+            break;
+        }
+      }
+
+      if (!reader.IsFinalBlock)
+      {
+        throw new JsonException("Unparsed JSON data");
+      }
+      if (values.Count > 1)
+      {
+        throw new JsonException("Too many top level JSON nodes");
+      }
+      if (values.Count == 0)
+      {
+        throw new JsonException("Failed to parse any JSON data");
+      }
+
+      // // test me
+      // Console.WriteLine(Utils.ParseJsonLenient("""
+      // {
+      //   "array": [
+      //     {
+      //       "key 1": 1,
+      //       "key 2": [
+      //         2,
+      //         3,
+      //         {
+      //           "inner key": {
+      //             "most inner key": [
+      //               "hi",
+      //               "123",
+      //               false,
+      //               null,
+      //               true,
+      //               4,
+      //             ],
+      //           },
+      //         },
+      //         "my str",
+      //       ],
+      //       "key 1": "pre last 1",
+      //       "key 1": "last value 1",
+      //       "key 2": "pre last 2",
+      //       "key 2": "last value 2",
+      //     },
+      //     5,
+      //     6,
+      //   ],
+      // }
+      // """));
+
+      return values.Pop();
+    }
+
+    var bytes = Encoding.UTF8.GetBytes(str);
+    var reader = new Utf8JsonReader(bytes, new JsonReaderOptions
+    {
+      CommentHandling = JsonCommentHandling.Skip, // we don't care about comments
+      AllowTrailingCommas = true,
+      AllowMultipleValues = false,
+    });
+
+    return ParseJson(ref reader);
+  }
+
   public static JsonNode? GetKeyIgnoreCase(this JsonNode? obj, params string[] keys)
   {
     if (keys is null || keys.Length == 0)

@@ -124,6 +124,8 @@ public static class Helpers
           if (oldNode.GetValueKind() == JsonValueKind.Object) // ===== 1
           {
             // convert it to array
+            // detach it from parent first otherwise it throws:
+            // "'System.InvalidOperationException' occurred in System.Text.Json.dll 'The node already has a parent.'"
             currentObj.Remove(nameSafe);
             currentObj[nameSafe] = new JsonArray(oldNode, newObj); // ==== 2
           }
