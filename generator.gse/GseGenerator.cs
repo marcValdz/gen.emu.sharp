@@ -297,27 +297,47 @@ public class GseGenerator : IGenerator
 
   void SaveBranches()
   {
+    const string NAME_PROP = "name";
+    const string PUBLIC_BRANCH_NAME = "public";
+
     var branches = appInfoModel.Branches.Branches
       .Select(br => new JsonObject
         {
-          ["name"] = br.Name,
+          [NAME_PROP] = br.Name,
           ["description"] = br.Description,
           ["protected"] = br.IsProtected,
           ["build_id"] = br.BuildId,
           ["time_updated"] = br.TimeUpdated,
         })
       .ToList();
-    if (branches.Count == 0)
+
+    // https://partner.steamgames.com/doc/api/ISteamApps#GetBetaInfo
+    // "Branch index starting at 0 which is always the default branch."
+    var publicBranchIndex = branches.FindIndex(br =>
+      // TODO is it ok to ignore case here? "PUBLIC" vs "public"
+      string.Equals(PUBLIC_BRANCH_NAME, br[NAME_PROP]?.ToString(), StringComparison.OrdinalIgnoreCase)
+    );
+    if (branches.Count == 0 || publicBranchIndex < 0)
     {
-      Log.Instance.Write(Log.Kind.Debug, $"no branches found, adding a dummy 'public' branch");
-      branches.Add(new JsonObject
+      Log.Instance.Write(
+        Log.Kind.Debug,
+        $"no branches found (count={branches.Count}) or missing 'public' branch, adding a dummy 'public' branch"
+      );
+      branches.Insert(0, new JsonObject
       {
-        ["name"] = "public",
+        [NAME_PROP] = PUBLIC_BRANCH_NAME,
         ["description"] = "",
         ["protected"] = false,
         ["build_id"] = 10,
         ["time_updated"] = Utils.GetUnixEpoch(),
       });
+    }
+    else if (publicBranchIndex > 0)
+    {
+      Log.Instance.Write(Log.Kind.Debug, $"'public' branch is at index [{publicBranchIndex}], moving it to the top");
+      var publicBranch = branches[publicBranchIndex];
+      branches.RemoveAt(publicBranchIndex);
+      branches.Insert(0, publicBranch);
     }
 
     Directory.CreateDirectory(settingsFolder);
