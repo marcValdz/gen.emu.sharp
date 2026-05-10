@@ -579,7 +579,7 @@ async Task GetStatsAndAchievementsSchemaAsync(AppInfoModel appModel)
   List<ulong> ownersIds = [];
   if (!ToolArgs.Instance.GetOptions.AnonLogin)
   {
-    ownersIds.Add(Client.Instance.GetSteamClient.SteamID.ConvertToUInt64()); // current user id
+    ownersIds.Add(Client.Instance!.GetSteamClient!.SteamID!.ConvertToUInt64()); // current user id
   }
   ownersIds.AddRange(appModel.TopReviewers); // steam reviewers
   ownersIds.AddRange(TopOwners.Instance.GetOwnersIds); // parsed from top_ownners.txt
