@@ -56,6 +56,7 @@ public class AchievementWatcherGenerator : IGenerator
     ParseSupportedLangs();
     FindSmallIconHash();
     GenerateAllSchemas();
+    GenerateGameIndex();
 
     return Task.CompletedTask;
   }
@@ -145,6 +146,21 @@ public class AchievementWatcherGenerator : IGenerator
   void FindSmallIconHash()
   {
     smallIconHash = appInfoModel.Product.ProductInfo.GetKeyIgnoreCase("common", "icon").ToStringSafe();
+  }
+  
+  void GenerateGameIndex()
+  {
+    var entry = new JsonObject
+    {
+      ["appid"]  = appInfoModel.AppId,
+      ["name"]   = appInfoModel.Product.NameInStore,
+      ["binary"] = appExe,
+      ["icon"]   = smallIconHash,
+    };
+
+    var gameIndex = new JsonArray { entry };
+    var filepath  = Path.Combine(baseFolder, ".", "gameIndex.json");
+    Utils.WriteJson(gameIndex, filepath);
   }
 
   void GenerateAllSchemas()
