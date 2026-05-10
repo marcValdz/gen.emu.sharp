@@ -15,7 +15,7 @@ public class ToolArgs
   public class Options
   {
     [Option('u', "uname", Default = null, Required = false,
-      HelpText = "login unsername")]
+      HelpText = "login username")]
     public string? Username { get; private set; } = null;
 
     [Option('p', "upass", Default = null, Required = false,
