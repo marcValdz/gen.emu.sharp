@@ -260,11 +260,35 @@ public class AchievementWatcherGenerator : IGenerator
       achList.Add(achObj);
     }
 
-    var smallIconUrl = string.IsNullOrEmpty(smallIconHash)
-      ? string.Empty
-      : $"{ICONS_BASE_URL}/{appInfoModel.AppId}/{smallIconHash}.jpg";
+    const string FASTLY_BASE = "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps";
+    const string COMMUNITY_FASTLY = "https://shared.fastly.steamstatic.com/community_assets/images/apps";
+    
+    var productInfo   = appInfoModel.Product.ProductInfo;
+    var appDetails    = appInfoModel.Product.AppDetails;
+    var libraryAssets = productInfo?["common"]?["library_assets_full"] ?? productInfo?["common"]?["library_assets"];
+    
+    var heroRaw = (libraryAssets?["library_hero"]?["image"]?[lang] ?? libraryAssets?["library_hero"]?["image"]?["english"])?.ToString();
+    var portraitRaw = (libraryAssets?["library_capsule"]?["image"]?[lang] ?? libraryAssets?["library_capsule"]?["image"]?["english"])?.ToString();
 
-    const string IMAGES_BASE_URL = "https://cdn.cloudflare.steamstatic.com/steam/apps";
+    // If the raw value contains '/', it's "hash/filename" — extract just the hash segment
+    // Otherwise it's already a bare filename with no hash prefix, build URL without it
+    string? BuildFastlyUrl(string? raw, string filename) => raw switch
+    {
+      null                        => null,
+      _ when raw.Contains('/')    => $"{FASTLY_BASE}/{appInfoModel.AppId}/{raw.Split('/')[0]}/{filename}",
+      _                           => $"{FASTLY_BASE}/{appInfoModel.AppId}/{filename}",
+    };
+    
+    // Most games use library_600x900 but some do use the library_capsule nomenclature
+    string? BuildPortraitUrl(string? raw)
+    {
+      if (raw == null) return null;
+      var filename = raw.Contains('/') ? raw.Split('/')[1] : raw;
+      return BuildFastlyUrl(raw, filename);
+    }
+    
+    var iconHash = productInfo?["common"]?["icon"]?.ToString();
+
     var schema = new JsonObject
     {
       ["appid"] = appInfoModel.AppId,
@@ -277,13 +301,16 @@ public class AchievementWatcherGenerator : IGenerator
       },
       ["img"] = new JsonObject
       {
-        ["header"] = $"{IMAGES_BASE_URL}/{appInfoModel.AppId}/header.jpg",
-        ["background"] = $"{IMAGES_BASE_URL}/{appInfoModel.AppId}/page_bg_generated_v6b.jpg",
-        ["portrait"] = $"{IMAGES_BASE_URL}/{appInfoModel.AppId}/library_600x900.jpg",
-        ["hero"] = $"{IMAGES_BASE_URL}/{appInfoModel.AppId}/library_hero.jpg",
-        ["icon"] = smallIconUrl,
+        // From app_details (Akamai) — these fields exist directly on the store API response
+        ["header"] = appDetails?["header_image"]?.ToString(),
+        ["background"] = appDetails?["background"]?.ToString(),
+
+        // From product_info (Fastly) — hash-based URLs
+        ["portrait"] = BuildPortraitUrl(portraitRaw),
+        ["hero"] = BuildFastlyUrl(heroRaw, "library_hero.jpg"),
+        ["icon"] = iconHash != null ? $"{COMMUNITY_FASTLY}/{appInfoModel.AppId}/{iconHash}.jpg" : null,
       },
-      ["apiVersion"] = 1,
+      ["apiVersion"] = 2,
     };
 
     return schema;
