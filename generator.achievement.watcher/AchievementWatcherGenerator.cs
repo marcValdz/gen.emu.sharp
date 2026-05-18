@@ -181,7 +181,7 @@ public class AchievementWatcherGenerator : IGenerator
     const string ICONS_BASE_URL = "https://steamcdn-a.akamaihd.net/steamcommunity/public/images/apps";
 
     JsonArray achList = [];
-    foreach (var ach in appInfoModel.StatsAndAchievements.Achievements.OrderBy(ach => ach.Id))
+    foreach (var ach in appInfoModel.StatsAndAchievements.Achievements)
     {
       var displayName = ach.FriendlyNameTranslations.GetKeyIgnoreCase(lang).ToStringSafe();
       if (string.IsNullOrEmpty(displayName)) // lang not found
@@ -244,11 +244,10 @@ public class AchievementWatcherGenerator : IGenerator
       var achObj = new JsonObject
       {
         ["name"] = ach.InternalName,
-        ["hidden"] = ach.IsHidden ? 1 : 0,
-        
         ["displayName"] = displayName,
         ["description"] = description,
         
+        ["hidden"] = ach.IsHidden ? 1 : 0,
         ["icon"] = iconUnlockedUrl,
         ["icongray"] = iconLockedUrl,
       };

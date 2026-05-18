@@ -1185,7 +1185,7 @@ public class GseGenerator : IGenerator
     bool needDefaultIconLocked = false;
 
     List<JsonObject> achs = [];
-    foreach (var ach in achsModels.OrderBy(ach => ach.Id))
+    foreach (var ach in achsModels)
     {
       string iconUnlockedName;
       if (string.IsNullOrEmpty(ach.IconUnlocked.Name))
@@ -1212,17 +1212,14 @@ public class GseGenerator : IGenerator
       var obj = new JsonObject
       {
         ["name"] = ach.InternalName,
-        ["hidden"] = ach.IsHidden ? 1 : 0,
-
-        ["icon"] =
-          Path.Combine(ACHIEVEMENT_IMAGE_FOLDER_NAME, iconUnlockedName).Replace('\\', '/'),
-        ["icon_gray"] =
-          Path.Combine(ACHIEVEMENT_IMAGE_FOLDER_NAME, ACHIEVEMENT_IMAGE_LOCKED_FOLDER_NAME, iconLockedName).Replace('\\', '/'),
-
         ["displayName"] = EnsureStringsNode(ach.FriendlyNameTranslations),
         ["description"] = EnsureStringsNode(ach.DescriptionTranslations),
 
+        ["hidden"] = ach.IsHidden ? 1 : 0,
+        ["icon"] = Path.Combine(ACHIEVEMENT_IMAGE_FOLDER_NAME, iconUnlockedName).Replace('\\', '/'),
+        ["icon_gray"] = Path.Combine(ACHIEVEMENT_IMAGE_FOLDER_NAME, ACHIEVEMENT_IMAGE_LOCKED_FOLDER_NAME, iconLockedName).Replace('\\', '/'),
       };
+
       if (ach.ProgressDetails is not null)
       {
         var progressJsonNode = ach.ProgressDetails.DeepClone();
