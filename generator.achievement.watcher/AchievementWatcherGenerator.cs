@@ -178,7 +178,7 @@ public class AchievementWatcherGenerator : IGenerator
 
   JsonObject GetSchemaForLang(string lang)
   {
-    const string ICONS_BASE_URL = "https://cdn.cloudflare.steamstatic.com/steamcommunity/public/images/apps";
+    const string ICONS_BASE_URL = "https://steamcdn-a.akamaihd.net/steamcommunity/public/images/apps";
 
     JsonArray achList = [];
     foreach (var ach in appInfoModel.StatsAndAchievements.Achievements.OrderBy(ach => ach.Id))
